@@ -5,6 +5,7 @@ U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE);
 int posicion_menu = 0; //Variable de la posicion del marco en el menu principal
 int numero = 0; //Variable del menu Separar1
 int cuenta=0; //Variable del menu contar
+int tracker=0; //Variable auxiliar para saber en que menu estoy
 
 
 #define encoder0PinA  2 //Variables del encoder (pin A, pin B y boton)
@@ -12,14 +13,15 @@ int cuenta=0; //Variable del menu contar
 #define boton 3
 
 
-volatile unsigned int encoder0Pos = 0;
-
+volatile unsigned int valor_boton = 0;
 
 void drawMenu(void) {
 
   char *menu[tamano_menu] = {
     "Contar tuercas", "Separar tuercas"  };
   int i=0;
+
+  tracker=1;
 
   for (i=0; i<tamano_menu; i++) {  
 
@@ -44,6 +46,8 @@ void drawMenu(void) {
 void drawContar (void) {
   int l=0, m=0;
   char *texto_contar[2] = {"Pulsa el encoder", "para salir"};
+  
+  tracker=2;
   
   u8g.setFontPosTop();
   u8g.setFont(u8g_font_unifont);
@@ -75,6 +79,8 @@ void drawSeparar1(void) {
   int j=0, k=0;  
   char *texto_separar[3] = {"Seleccione el numero", "de tuercas que desea", "separar"  }; 
 
+  tracker=3;
+
   u8g.setFontPosTop();
   u8g.setFont(u8g_font_6x13);
   for(k=0;k<3;k++){
@@ -105,12 +111,50 @@ void doEncoder() {
   /* If pinA and pinB are both high or both low, it is spinning
    * forward. If they're different, it's going backward.
    */
-   
-  if (digitalRead(encoder0PinA) == digitalRead(encoder0PinB)) {
-    numero++;
-  } else {
-    numero--;
+  
+  if (tracker==1) {
+     
+    if (digitalRead(encoder0PinA) == digitalRead(encoder0PinB)) {
+     posicion_menu++;
+     if(posicion_menu>1) {posicion_menu=1;}
+    }
+    else {
+     posicion_menu--;
+     if (posicion_menu<0) {posicion_menu=0;}  
+    }
   }
+
+
+  else if (tracker==2) {
+  
+   if (digitalRead(encoder0PinA) == digitalRead(encoder0PinB)) {
+     cuenta++;
+     if(cuenta>9999) {cuenta=9999;}
+    }
+    else {
+     cuenta--;
+     if (cuenta<0) {cuenta=0;}  
+    } 
+  }
+  
+  
+  else if (tracker==3) {
+  
+    if (digitalRead(encoder0PinA) == digitalRead(encoder0PinB)) {
+     numero++;
+     if(numero>9999) {numero=9999;}
+    }
+    else {
+     numero--;
+     if (numero<0) {numero=0;}  
+    }
+  }
+  
+}
+
+
+void doBoton (){
+  valor_boton = digitalRead(boton);
 }
 
 
@@ -118,9 +162,11 @@ void doEncoder() {
 void setup(void) {
 
  pinMode(encoder0PinA, INPUT_PULLUP);
- pinMode(encoder0PinB, INPUT_PULLUP); 
+ pinMode(encoder0PinB, INPUT_PULLUP);
+ pinMode(boton, INPUT); 
    
  attachInterrupt(0, doEncoder, CHANGE);  // encoder pin on interrupt 0 - pin 2
+ attachInterrupt(1, doBoton, CHANGE); //encoder boton on interrupt 1 - pin 3
  Serial.begin (9600); 
  
 }
@@ -128,21 +174,41 @@ void setup(void) {
 
 
 void loop(void) {
-  // picture loop
- 
+  
   u8g.firstPage();  
   do {
+    delay(10);
     drawMenu();
   } 
   while( u8g.nextPage() );
+  
+  if (posicion_menu==0&&valor_boton) {
+   do{
+     delay(10);
+    u8g.firstPage();  
+    do {
+    drawContar();
+    } 
+    while( u8g.nextPage());
+   } 
+   while(valor_boton==0);
+   cuenta=0;
+  }
+  
+  if (posicion_menu==1&&valor_boton) {
+   do{
+    delay(10);
+    u8g.firstPage();  
+    do {
+    drawSeparar1();
+    } 
+    while( u8g.nextPage() );
+   } while(valor_boton==0);
+   numero=0;
+  }
 
 }
 
-
-
-
-
-  // rebuild the picture after some delay
 
 //  cuenta=cuenta+1; //Para testear el cambio de numero en la funcion de contador
 
