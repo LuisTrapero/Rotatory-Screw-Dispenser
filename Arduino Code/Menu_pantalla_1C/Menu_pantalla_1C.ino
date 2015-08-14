@@ -1,4 +1,6 @@
 #include "U8glib.h"
+#include <Servo.h> 
+
 U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE); 
 
 #define tamano_menu 2
@@ -6,19 +8,21 @@ int posicion_menu = 0; //Variable de la posicion del marco en el menu principal
 int numero = 0; //Variable del menu Separar1
 int cuenta=0; //Variable del menu contar
 int tracker=0; //Variable auxiliar para saber en que menu estoy
-
+int valor_boton=0; //Variable para leer el valor del boton
+Servo servo;
+long int temporizador= 0;
 
 #define encoder0PinA  2 //Variables del encoder (pin A, pin B y boton)
 #define encoder0PinB  4
-#define boton 3
+#define sensor 3
+#define boton 7
 
 
-volatile unsigned int valor_boton = 0;
+volatile unsigned int valor_sensor = 0;
 
 void drawMenu(void) {
 
-  char *menu[tamano_menu] = {
-    "Contar tuercas", "Separar tuercas"  };
+  char *menu[tamano_menu] = {"Contar tuercas", "Separar tuercas"  };
   int i=0;
 
   tracker=1;
@@ -123,19 +127,6 @@ void doEncoder() {
      if (posicion_menu<0) {posicion_menu=0;}  
     }
   }
-
-
-  else if (tracker==2) {
-  
-   if (digitalRead(encoder0PinA) == digitalRead(encoder0PinB)) {
-     cuenta++;
-     if(cuenta>9999) {cuenta=9999;}
-    }
-    else {
-     cuenta--;
-     if (cuenta<0) {cuenta=0;}  
-    } 
-  }
   
   
   else if (tracker==3) {
@@ -153,8 +144,12 @@ void doEncoder() {
 }
 
 
-void doBoton (){
-  valor_boton = digitalRead(boton);
+void sensor_IR (){
+  valor_sensor = digitalRead(sensor);
+  if (valor_sensor=HIGH&&millis()-temporizador>=50)
+  {cuenta++;
+  temporizador=millis();
+  }
 }
 
 
@@ -163,11 +158,16 @@ void setup(void) {
 
  pinMode(encoder0PinA, INPUT_PULLUP);
  pinMode(encoder0PinB, INPUT_PULLUP);
+ pinMode(sensor, INPUT); 
  pinMode(boton, INPUT); 
+ 
+ servo.attach(9);
    
  attachInterrupt(0, doEncoder, CHANGE);  // encoder pin on interrupt 0 - pin 2
- attachInterrupt(1, doBoton, CHANGE); //encoder boton on interrupt 1 - pin 3
+ attachInterrupt(1, sensor_IR, FALLING); //encoder boton on interrupt 1 - pin 3
  Serial.begin (9600); 
+ 
+ 
  
 }
 
@@ -177,27 +177,37 @@ void loop(void) {
   
   u8g.firstPage();  
   do {
-    delay(10);
-    drawMenu();
+  drawMenu();
   } 
   while( u8g.nextPage() );
   
-  if (posicion_menu==0&&valor_boton) {
-   do{
-     delay(10);
-    u8g.firstPage();  
-    do {
-    drawContar();
-    } 
-    while( u8g.nextPage());
-   } 
-   while(valor_boton==0);
+  int valor_boton = digitalRead(boton);
+  delay(10);
+  
+  if (posicion_menu==0 && valor_boton) {
    cuenta=0;
+   servo.write(100);
+   delay(500);
+   
+    do{
+     valor_boton = digitalRead(boton);
+     
+     u8g.firstPage();  
+      do {
+      drawContar();
+      } 
+     while( u8g.nextPage());
+    } 
+   while(valor_boton==0);
+  
+  servo.write(90);
   }
   
   if (posicion_menu==1&&valor_boton) {
+   delay(500);
+   
    do{
-    delay(10);
+    valor_boton = digitalRead(boton);
     u8g.firstPage();  
     do {
     drawSeparar1();
