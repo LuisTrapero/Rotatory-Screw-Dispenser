@@ -10,7 +10,6 @@ int cuenta=0; //Variable del menu contar
 int tracker=0; //Variable auxiliar para saber en que menu estoy
 int valor_boton=0; //Variable para leer el valor del boton
 int tuercas=0; //Numero de tuercas que detecta el sensor en el modo de Separar tuercas
-int aux=0;
 Servo servo;
 long int temporizador= 0;
 
@@ -87,7 +86,6 @@ void drawSeparar1(void) {
   tracker=3;
     
     
-  if(aux==0){
   u8g.setFontPosTop();
   u8g.setFont(u8g_font_6x13);
   for(k=0;k<3;k++){
@@ -111,8 +109,7 @@ void drawSeparar1(void) {
   
   valor_boton = digitalRead(boton);
   
-  if(valor_boton){aux=1;}
-  }
+
 }
   
 void drawSeparar2(void) {
@@ -149,7 +146,6 @@ void drawSeparar2(void) {
     
    delay(10);
    valor_boton = digitalRead(boton);
-   if (tuercas>=numero&&valor_boton) {aux=2;}
    
 }
 
@@ -272,7 +268,7 @@ void loop(void) {
      } 
      while( u8g.nextPage() );
     
-    } while(aux<1);
+    } while(valor_boton==0);
    
    do{
     u8g.firstPage(); 
@@ -280,11 +276,11 @@ void loop(void) {
     do {
     drawSeparar2();
     }while( u8g.nextPage() );  
-   }while(aux!=2);
+   }while(valor_boton==0);
    
+   delay(100);
    numero=0;
    tuercas=0;
-   aux=0;
    servo.write(90);
   }
 
