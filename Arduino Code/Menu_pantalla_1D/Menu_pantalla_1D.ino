@@ -9,6 +9,8 @@ int numero = 0; //Variable del menu Separar1
 int cuenta=0; //Variable del menu contar
 int tracker=0; //Variable auxiliar para saber en que menu estoy
 int valor_boton=0; //Variable para leer el valor del boton
+int tuercas=0; //Numero de tuercas que detecta el sensor en el modo de Separar tuercas
+int aux=0;
 Servo servo;
 long int temporizador= 0;
 
@@ -80,11 +82,12 @@ void drawContar (void) {
 
 void drawSeparar1(void) {
 
-  int j=0, k=0;  
+  int j=0, k=0;
   char *texto_separar[3] = {"Seleccione el numero", "de tuercas que desea", "separar"  }; 
-
   tracker=3;
-
+    
+    
+  if(aux==0){
   u8g.setFontPosTop();
   u8g.setFont(u8g_font_6x13);
   for(k=0;k<3;k++){
@@ -105,8 +108,51 @@ void drawSeparar1(void) {
 
   u8g.setPrintPos(margen_ancho2+ancho_fuente*j, margen_alto2);
   u8g.print(numero);
-
+  
+  valor_boton = digitalRead(boton);
+  
+  if(valor_boton){aux=1;}
+  }
 }
+  
+void drawSeparar2(void) {
+  
+  int l=0, m=0, p=0;
+  char *texto_cuenta[2] = {"Pulsa el encoder", "para salir"};
+  
+  tracker=4;
+     
+   u8g.setFontPosTop();
+   u8g.setFont(u8g_font_unifont);
+  
+   for (l=0;l<2;l++){ 
+   u8g.drawStr(0,44+16*l,texto_cuenta[l]);}
+  
+   u8g.setFontPosTop();
+   u8g.setFont(u8g_font_ncenR18);
+   int ancho_fuente2 = 10;
+   int margen_ancho3 = (128-4*ancho_fuente2)/2;
+   int altura3 = u8g.getFontAscent()-u8g.getFontDescent();
+   int margen_alto3 = 24;
+  
+   if (tuercas<10) {p=3;}
+    else if (tuercas>=10&&tuercas<100) {p=2;}
+     else if (tuercas>=100&&tuercas<1000) {p=1;}
+      else {m=0;}
+     
+   u8g.setPrintPos(margen_ancho3+ancho_fuente2*p, margen_alto3);
+   u8g.print(tuercas);
+   
+      
+   if(tuercas>=numero)
+    {servo.write(90);}
+    
+   delay(10);
+   valor_boton = digitalRead(boton);
+   if (tuercas>=numero&&valor_boton) {aux=2;}
+   
+}
+
 
 
 
@@ -145,10 +191,21 @@ void doEncoder() {
 
 
 void sensor_IR (){
-  valor_sensor = digitalRead(sensor);
-  if (valor_sensor=HIGH&&millis()-temporizador>=50)
-  {cuenta++;
-  temporizador=millis();
+  
+  if (tracker==2) {
+   valor_sensor = digitalRead(sensor);
+   if (valor_sensor=HIGH&&millis()-temporizador>=50)
+   {cuenta++;
+   temporizador=millis();
+   }
+  }
+  
+  if (tracker==4)
+  {valor_sensor = digitalRead(sensor);
+   if (valor_sensor=HIGH&&millis()-temporizador>=50)
+   {tuercas++;
+   temporizador=millis();
+   }
   }
 }
 
@@ -163,8 +220,8 @@ void setup(void) {
  
  servo.attach(9);
    
- attachInterrupt(0, doEncoder, CHANGE);  // encoder pin on interrupt 0 - pin 2
- attachInterrupt(1, sensor_IR, FALLING); //encoder boton on interrupt 1 - pin 3
+ attachInterrupt(0, doEncoder, RISING);  // encoder pin on interrupt 0 - pin 2
+ attachInterrupt(1, sensor_IR, FALLING);  //encoder boton on interrupt 1 - pin 3
  Serial.begin (9600); 
  
  
@@ -181,12 +238,12 @@ void loop(void) {
   } 
   while( u8g.nextPage() );
   
-  int valor_boton = digitalRead(boton);
+  valor_boton = digitalRead(boton);
   delay(10);
   
   if (posicion_menu==0 && valor_boton) {
    cuenta=0;
-   servo.write(100);
+   servo.write(98);
    delay(500);
    
     do{
@@ -203,18 +260,32 @@ void loop(void) {
   servo.write(90);
   }
   
-  if (posicion_menu==1&&valor_boton) {
+  if (posicion_menu==1 && valor_boton) {
    delay(500);
+   tuercas=0;
    
    do{
     valor_boton = digitalRead(boton);
-    u8g.firstPage();  
+    u8g.firstPage(); 
     do {
-    drawSeparar1();
-    } 
-    while( u8g.nextPage() );
-   } while(valor_boton==0);
+     drawSeparar1();
+     } 
+     while( u8g.nextPage() );
+    
+    } while(aux<1);
+   
+   do{
+    u8g.firstPage(); 
+    servo.write(98);
+    do {
+    drawSeparar2();
+    }while( u8g.nextPage() );  
+   }while(aux!=2);
+   
    numero=0;
+   tuercas=0;
+   aux=0;
+   servo.write(90);
   }
 
 }
